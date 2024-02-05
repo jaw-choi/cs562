@@ -9,8 +9,11 @@
 class FBO {
 public:
     unsigned int fboID;
-    unsigned int textureID;
-    int width, height;  // Size of the texture.
+    unsigned int gPosition;
+    unsigned int gNormal;
+    unsigned int gDiffuse;
+    unsigned int gSpecular;
+    int width, height, depth;  // Size of the texture.
 
     void CreateFBO(const int w, const int h);
     

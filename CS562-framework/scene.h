@@ -29,7 +29,10 @@ enum ObjectIds {
     rPicId	= 8,
     teapotId	= 9,
     spheresId	= 10,
-    floorId     = 11
+    floorId     = 11,
+    bunnyId     = 12,
+    QuadId     = 13,
+    SphereId     = 14,
 };
 
 class Shader;
@@ -45,8 +48,11 @@ public:
     // Light parameters
     float lightSpin, lightTilt, lightDist;
     glm::vec3 lightPos;
+    std::vector<glm::vec3> lightPositions;
+    std::vector<glm::vec3> lightColors;
+    std::vector<float> lightRadius;
     // @@ Perhaps declare additional scene lighting values here. (lightVal, lightAmb)
-    
+    const unsigned int NR_LIGHTS = 32;
 
 
     bool drawReflective;
@@ -62,7 +68,7 @@ public:
     int imode; // Image Based Lighting mode
     bool flatshade;
     int mode; // Extra mode indicator hooked up to number keys and sent to shader
-    
+    bool localLights = false;
     // Viewport
     int width, height;
 
@@ -71,20 +77,27 @@ public:
 
     // All objects in the scene are children of this single root object.
     Object* objectRoot;
-    Object *central, *anim, *room, *floor, *teapot, *podium, *sky,
-            *ground, *sea, *spheres, *leftFrame, *rightFrame;
+    Object* objectRootLight;
+    Object *central, *anim, *room, *floor, *teapot, *podium, *sky,*quad,
+            *ground, *sea, *spheres, *leftFrame, *rightFrame, *bunny, *light,
+        *bunny1, *bunny2, *bunny3, *bunny4;
 
     std::vector<Object*> animated;
     ProceduralGround* proceduralground;
 
     // Shader programs
+    ShaderProgram* gBufferProgram;
     ShaderProgram* lightingProgram;
+    ShaderProgram* lightBoxProgram;
     // @@ Declare additional shaders if necessary
-
+    FBO* fbo;
+    Texture* m_texture;
 
     // Options menu stuff
     bool show_demo_window;
-
+    float lightX = 0;
+    float lightY = 0;
+    float lightZ = 0;
     void InitializeScene();
     void BuildTransforms();
     void DrawMenu();

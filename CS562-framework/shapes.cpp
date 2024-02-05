@@ -117,6 +117,10 @@ unsigned int VaoFromTris(std::vector<glm::vec4> Pnt,
 
 void Shape::MakeVAO()
 {
+    if(Nrm.size()==0)
+        ComputeNRM();
+    if (Tex.size() == 0)
+        ComputeTEX();
     vaoID = VaoFromTris(Pnt, Nrm, Tex, Tan, Tri);
     count = Tri.size();
 }
@@ -129,6 +133,80 @@ void Shape::DrawVAO()
     glDrawElements(GL_TRIANGLES, 3*count, GL_UNSIGNED_INT, 0);
     CHECKERROR;
     glBindVertexArray(0);
+}
+
+void Shape::ComputeNRM()
+{
+    int size_ = Pnt.size();
+    int Facesize_ = Tri.size();
+    std::vector<int> nb_seen;
+    nb_seen.resize(size_, 0);
+    Nrm.resize(size_, glm::vec3());
+    std::vector<std::vector<glm::vec3>> prevNormal;
+    prevNormal.resize(size_, std::vector<glm::vec3>(0));
+
+
+    for (int i = 0; i < Facesize_; i++)
+    {
+        glm::vec3 vertex1 = Pnt[Tri[i].x].xyz;
+        glm::vec3 vertex2 = Pnt[Tri[i].y].xyz;
+        glm::vec3 vertex3 = Pnt[Tri[i].z].xyz;
+        glm::vec3 edge1 = vertex2 - vertex1;
+        glm::vec3 edge2 = vertex3 - vertex1;
+
+        glm::vec3 normal = glm::cross(edge1, edge2);
+        normal = glm::normalize(normal);
+        //Nrm.push_back(normal);
+
+        int v[3];
+        v[0] = Tri[i].x;
+        v[1] = Tri[i].y;
+        v[2] = Tri[i].z;
+
+        //Averaging normals
+        for (int j = 0; j < 3; j++)
+        {
+            bool IgnoreParrel = false;
+            int cur_v = v[j];
+            nb_seen[cur_v]++;
+            if (nb_seen[cur_v] == 1)
+            {
+                Nrm[cur_v] = normal;
+                prevNormal[cur_v].push_back(normal);
+            }
+            else
+            {
+                for (int k = 0; k < prevNormal[cur_v].size(); k++)
+                {
+                    if (prevNormal[cur_v][k] == normal)
+                        IgnoreParrel = true;
+                }
+                // average
+                if (IgnoreParrel != true)
+                {
+                     Nrm[cur_v].x = Nrm[cur_v].x * (1.f - 1.f / nb_seen[cur_v]) + normal.x * 1.f / nb_seen[cur_v];
+                     Nrm[cur_v].y =  Nrm[cur_v].y * (1.f - 1.f / nb_seen[cur_v]) + normal.y * 1.f / nb_seen[cur_v];
+                     Nrm[cur_v].z =  Nrm[cur_v].z * (1.f - 1.f / nb_seen[cur_v]) + normal.z * 1.f / nb_seen[cur_v];
+                     Nrm[cur_v] = glm::normalize(Nrm[cur_v]);
+                }
+            }
+        }
+    }
+
+
+}
+
+void Shape::ComputeTEX()
+{
+    int size_ = Pnt.size();
+    glm::vec3 planeNormal(0.0f, 1.0f, 0.0f);
+
+    for (int i = 0; i < size_; i++)
+    {
+        projection = glm::proj(glm::vec3(Pnt[i].x, Pnt[i].y, Pnt[i].z), planeNormal);
+        textureCoord = glm::vec2(projection.x, projection.y);
+        Tex.push_back(textureCoord);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -520,7 +598,7 @@ Cylinder::Cylinder(const int n)
 Ply::Ply(const char* name, const bool reverse)
 {
     diffuseColor = glm::vec3(0.8, 0.8, 0.5);
-    specularColor = glm::vec3(1.0, 1.0, 1.0);
+    specularColor = glm::vec3(0.5, 0.2, 0.7);
     shininess = 120.0;
 
     // Open PLY file and read header;  Exit on any failure.
@@ -532,13 +610,16 @@ Ply::Ply(const char* name, const bool reverse)
     ply_set_read_cb(ply, "vertex", "x", vertex_cb, this, 0);
     ply_set_read_cb(ply, "vertex", "y", vertex_cb, this, 1);
     ply_set_read_cb(ply, "vertex", "z", vertex_cb, this, 2);
-
+    //normal
     ply_set_read_cb(ply, "vertex", "nx", normal_cb, this, 0);
     ply_set_read_cb(ply, "vertex", "ny", normal_cb, this, 1);
     ply_set_read_cb(ply, "vertex", "nz", normal_cb, this, 2);
-
+    //texture
     ply_set_read_cb(ply, "vertex", "s", texture_cb, this, 0);
     ply_set_read_cb(ply, "vertex", "t", texture_cb, this, 1);
+
+    ply_set_read_cb(ply, "vertex", "confidence", some_cb, this, 0);
+    ply_set_read_cb(ply, "vertex", "intensity", some_cb, this, 1);
 
     // Setup callback for faces
     ply_set_read_cb(ply, "face", "vertex_indices", face_cb, this, 0);
@@ -554,6 +635,7 @@ glm::vec4 staticPnt;
 glm::vec3 staticNrm;
 glm::vec2 staticTex;
 glm::ivec3 staticTri;
+glm::vec2 staticSome;
 
 // Vertex callback;  Must be static (stupid C++)
 int Ply::vertex_cb(p_ply_argument argument) {
@@ -591,6 +673,18 @@ int Ply::texture_cb(p_ply_argument argument) {
     return 1;
 }
 
+int Ply::some_cb(p_ply_argument argument) {
+    long index;
+    Ply* ply;
+    ply_get_argument_user_data(argument, (void**)&ply, &index);
+    double c = ply_get_argument_value(argument);
+    staticSome[index] = c;
+    if (index == 1) {
+        ply->Some.push_back(staticSome);
+    }
+    return 1;
+}
+
 void ComputeTangent(Ply* ply)
 {
     int t = ply->Tri.size() - 1;
@@ -623,7 +717,8 @@ int Ply::face_cb(p_ply_argument argument) {
         else if (value_index==2) {
             staticTri[2] = (int)ply_get_argument_value(argument);
             ply->Tri.push_back(staticTri);
-            ComputeTangent(ply); }
+            if(ply->Nrm.size()!=0)
+                ComputeTangent(ply); }
         else if (value_index==3) {
             staticTri[1] = staticTri[2];
             staticTri[2] = (int)ply_get_argument_value(argument);

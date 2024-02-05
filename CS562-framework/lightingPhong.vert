@@ -13,14 +13,14 @@ in vec2 vertexTexture;
 in vec3 vertexTangent;
 
 out vec3 normalVec, lightVec, eyeVec;
-out vec2 texCoord;
+out vec2 TexCoords;
 uniform vec3 lightPos;
 
 void main()
 {
     vec3 eye = (WorldInverse*vec4(0,0,0,1)).xyz;
 
-    gl_Position = WorldProj*WorldView*ModelTr*vertex;
+    gl_Position = vertex;
     
     vec3 worldPos = (ModelTr*vertex).xyz;
 
@@ -28,5 +28,5 @@ void main()
     lightVec = lightPos - worldPos;
     eyeVec = eye - worldPos;
 
-    texCoord = vertexTexture; 
+    TexCoords = vertexTexture; 
 }

@@ -56,7 +56,8 @@ int main(int argc, char** argv)
 
         scene.DrawScene();
         scene.DrawMenu();
-        glfwSwapBuffers(scene.window); }
+        glfwSwapBuffers(scene.window); 
+    }
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();

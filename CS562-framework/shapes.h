@@ -40,6 +40,7 @@ public:
     std::vector<glm::vec3> Nrm;
     std::vector<glm::vec2> Tex;
     std::vector<glm::vec3> Tan;
+    std::vector<glm::vec2> Some;
 
     // Lighting information
     glm::vec3 diffuseColor, specularColor;
@@ -55,12 +56,16 @@ public:
     float size;
     bool animate;
 
+    glm::vec3 projection;
+    glm::vec2 textureCoord;
     // Constructor and destructor
     Shape() :animate(false) {}
     virtual ~Shape() {}
 
     virtual void MakeVAO();
     virtual void DrawVAO();
+    void ComputeNRM();
+    void ComputeTEX();
 };
 
 class Box: public Shape
@@ -100,6 +105,8 @@ public:
     Plane(const float range, const int n);
 };
 
+
+
 class ProceduralGround: public Shape
 {
 public:
@@ -132,6 +139,7 @@ public:
     static int normal_cb(p_ply_argument argument);
     static int texture_cb(p_ply_argument argument);
     static int face_cb(p_ply_argument argument);
+    static int some_cb(p_ply_argument argument);
 };
 
 #endif
